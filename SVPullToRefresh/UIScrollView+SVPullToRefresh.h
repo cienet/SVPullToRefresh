@@ -22,6 +22,7 @@ typedef NS_ENUM(NSUInteger, SVPullToRefreshPosition) {
 
 - (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler;
 - (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler position:(SVPullToRefreshPosition)position;
+- (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler pullToRefreshHeight:(CGFloat)height position:(SVPullToRefreshPosition)position;
 - (void)triggerPullToRefresh;
 
 @property (nonatomic, strong, readonly) SVPullToRefreshView *pullToRefreshView;

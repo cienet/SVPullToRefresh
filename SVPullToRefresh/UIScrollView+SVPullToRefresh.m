@@ -13,10 +13,16 @@
 //fequal() and fequalzro() from http://stackoverflow.com/a/1614761/184130
 #define fequal(a,b) (fabs((a) - (b)) < FLT_EPSILON)
 #define fequalzero(a) (fabs(a) < FLT_EPSILON)
+#define LOADING_VIEW_COLOR [UIColor colorWithRed:46.0/255.0f green:183.0/255.0f blue:144.0/255.0f alpha:1.0f]
 
-static CGFloat const SVPullToRefreshViewHeight = 60;
+#define PULL_TO_REFRESH_HEIGHT 60.0f
 
-@interface SVPullToRefreshArrow : UIView
+static CGFloat  SVPullToRefreshViewHeight = PULL_TO_REFRESH_HEIGHT;
+
+
+@interface SVPullToRefreshArrow : UIView {
+    UIImageView *_arrowImageView;
+}
 
 @property (nonatomic, strong) UIColor *arrowColor;
 
@@ -66,7 +72,12 @@ static char UIScrollViewPullToRefreshView;
 @dynamic pullToRefreshView, showsPullToRefresh;
 
 - (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler position:(SVPullToRefreshPosition)position {
-    
+    [self addPullToRefreshWithActionHandler:actionHandler pullToRefreshHeight:PULL_TO_REFRESH_HEIGHT position:position];
+}
+
+- (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler pullToRefreshHeight:(CGFloat)height position:(SVPullToRefreshPosition)position {
+    SVPullToRefreshViewHeight = height;
+
     if(!self.pullToRefreshView) {
         CGFloat yOrigin;
         switch (position) {
@@ -83,18 +94,17 @@ static char UIScrollViewPullToRefreshView;
         view.pullToRefreshActionHandler = actionHandler;
         view.scrollView = self;
         [self addSubview:view];
-        
+
         view.originalTopInset = self.contentInset.top;
         view.originalBottomInset = self.contentInset.bottom;
         view.position = position;
         self.pullToRefreshView = view;
         self.showsPullToRefresh = YES;
     }
-    
 }
 
 - (void)addPullToRefreshWithActionHandler:(void (^)(void))actionHandler {
-    [self addPullToRefreshWithActionHandler:actionHandler position:SVPullToRefreshPositionTop];
+    [self addPullToRefreshWithActionHandler:actionHandler pullToRefreshHeight:PULL_TO_REFRESH_HEIGHT position:SVPullToRefreshPositionTop];
 }
 
 - (void)triggerPullToRefresh {
@@ -175,6 +185,7 @@ static char UIScrollViewPullToRefreshView;
         
         // default styling values
         self.activityIndicatorViewStyle = UIActivityIndicatorViewStyleGray;
+        self.activityIndicatorView.color = LOADING_VIEW_COLOR;
         self.textColor = [UIColor darkGrayColor];
         self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
         self.state = SVPullToRefreshStateStopped;
@@ -442,7 +453,7 @@ static char UIScrollViewPullToRefreshView;
 
 - (SVPullToRefreshArrow *)arrow {
     if(!_arrow) {
-		_arrow = [[SVPullToRefreshArrow alloc]initWithFrame:CGRectMake(0, self.bounds.size.height-54, 22, 48)];
+		_arrow = [[SVPullToRefreshArrow alloc]initWithFrame:CGRectMake(0, self.bounds.size.height-54, 30, 30)];
         _arrow.backgroundColor = [UIColor clearColor];
 		[self addSubview:_arrow];
     }
@@ -453,6 +464,7 @@ static char UIScrollViewPullToRefreshView;
     if(!_activityIndicatorView) {
         _activityIndicatorView = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
         _activityIndicatorView.hidesWhenStopped = YES;
+        _activityIndicatorView.color = LOADING_VIEW_COLOR;
         [self addSubview:_activityIndicatorView];
     }
     return _activityIndicatorView;
@@ -680,67 +692,25 @@ static char UIScrollViewPullToRefreshView;
 	return [UIColor grayColor]; // default Color
 }
 
-- (void)drawRect:(CGRect)rect {
-	CGContextRef c = UIGraphicsGetCurrentContext();
-	
-	// the rects above the arrow
-	CGContextAddRect(c, CGRectMake(5, 0, 12, 4)); // to-do: use dynamic points
-	CGContextAddRect(c, CGRectMake(5, 6, 12, 4)); // currently fixed size: 22 x 48pt
-	CGContextAddRect(c, CGRectMake(5, 12, 12, 4));
-	CGContextAddRect(c, CGRectMake(5, 18, 12, 4));
-	CGContextAddRect(c, CGRectMake(5, 24, 12, 4));
-	CGContextAddRect(c, CGRectMake(5, 30, 12, 4));
-	
-	// the arrow
-	CGContextMoveToPoint(c, 0, 34);
-	CGContextAddLineToPoint(c, 11, 48);
-	CGContextAddLineToPoint(c, 22, 34);
-	CGContextAddLineToPoint(c, 0, 34);
-	CGContextClosePath(c);
-	
-	CGContextSaveGState(c);
-	CGContextClip(c);
-	
-	// Gradient Declaration
-	CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-	CGFloat alphaGradientLocations[] = {0, 0.8f};
-    
-	CGGradientRef alphaGradient = nil;
-    if([[[UIDevice currentDevice] systemVersion]floatValue] >= 5){
-        NSArray* alphaGradientColors = [NSArray arrayWithObjects:
-                                        (id)[self.arrowColor colorWithAlphaComponent:0].CGColor,
-                                        (id)[self.arrowColor colorWithAlphaComponent:1].CGColor,
-                                        nil];
-        alphaGradient = CGGradientCreateWithColors(colorSpace, (__bridge CFArrayRef)alphaGradientColors, alphaGradientLocations);
-    }else{
-        const CGFloat * components = CGColorGetComponents([self.arrowColor CGColor]);
-        size_t numComponents = CGColorGetNumberOfComponents([self.arrowColor CGColor]);
-        CGFloat colors[8];
-        switch(numComponents){
-            case 2:{
-                colors[0] = colors[4] = components[0];
-                colors[1] = colors[5] = components[0];
-                colors[2] = colors[6] = components[0];
-                break;
-            }
-            case 4:{
-                colors[0] = colors[4] = components[0];
-                colors[1] = colors[5] = components[1];
-                colors[2] = colors[6] = components[2];
-                break;
-            }
-        }
-        colors[3] = 0;
-        colors[7] = 1;
-        alphaGradient = CGGradientCreateWithColorComponents(colorSpace,colors,alphaGradientLocations,2);
-    }
-	
-	
-	CGContextDrawLinearGradient(c, alphaGradient, CGPointZero, CGPointMake(0, rect.size.height), 0);
-    
-	CGContextRestoreGState(c);
-	
-	CGGradientRelease(alphaGradient);
-	CGColorSpaceRelease(colorSpace);
+- (void)setArrowColor:(UIColor *)color {
+    arrowColor = color;
+    [_arrowImageView setTintColor:arrowColor];
 }
+
+- (id)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = arrowColor;
+
+        CGFloat hDistance = 0.0f;
+        CGFloat vDistance = 0.0f;
+        _arrowImageView = [[UIImageView alloc] initWithFrame:CGRectMake(hDistance, vDistance, self.frame.size.width-2*hDistance, self.frame.size.height-2*hDistance)];
+        [_arrowImageView setImage:[[UIImage imageNamed:@"load_arrow"] imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate]];
+        [_arrowImageView setContentMode:UIViewContentModeScaleAspectFit];
+        [self addSubview:_arrowImageView];
+
+    }
+    return self;
+}
+
 @end
